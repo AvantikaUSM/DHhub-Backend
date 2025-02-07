@@ -56,12 +56,9 @@ app.use(
     secret: process.env.SESSION_SECRET || "your_secret_key", 
     resave: false, 
     saveUninitialized: false, 
-    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI, 
-      dbName: "mississippihubcluster", 
-      collectionName: "test", 
-      autoRemove: "native", }), 
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI}), 
       cookie: { 
-        secure: process.env.NODE_ENV === "production", httpOnly: true, maxAge: 24 * 60 * 60 * 1000, }, 
+        secure: true, sameSite:"none" }, 
       }) 
     );
 
