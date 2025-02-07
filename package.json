@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "postinstall": "apt-get update && apt-get install -y poppler-utils"
+    "start": "node server.js"
 
   },
   "keywords": [],

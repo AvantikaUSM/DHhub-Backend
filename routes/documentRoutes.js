@@ -4,8 +4,7 @@ const Document = require("../models/Document");
 const { isAuthenticated } = require("../middleware/authMiddleware"); // Ensure user is logged in
 const fs = require("fs");
 const path=require("path");
-const pdf = require("pdf-poppler");
-const pdfjsLib = require("pdfjs-dist");
+
 const router = express.Router();
 const {exec} = require("child_process");
 
