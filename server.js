@@ -60,7 +60,21 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if(allowedOrigins.includes(origin)){
+  res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
 
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 // Routes
 app.use("/auth", require("./routes/auth"));
 app.get("/",(req, res)=>{
