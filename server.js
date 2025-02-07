@@ -2,6 +2,7 @@ require("dotenv").config({path:"./.env"});
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const passport = require("passport");
 const cors = require("cors");
 
@@ -27,6 +28,8 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({mongoUrl: process.env.MONGO_URI}),
+    cookie: {secure:false}
   })
 );
 
@@ -39,7 +42,7 @@ app.get("/",(req, res)=>{
     res.send("API is running");
   });
   app.use("/documents",  require("./routes/documentRoutes"));
-// Connect to MongoDB
+/* Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(()  => {console.log("Connected to Mongodb Atlas");
@@ -47,6 +50,8 @@ mongoose
   app.listen(PORT, ()=> console.log(`server running on port ${PORT}`));
 })
 
-  .catch((err) => console.error(err,"Mongodb connection error"));
+  .catch((err) => console.error(err,"Mongodb connection error")); */
+
+ 
 
 
