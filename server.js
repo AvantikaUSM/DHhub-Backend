@@ -24,20 +24,33 @@ app.use(express.json());
 const allowedOrigins=[
   "http://localhost:3000",
   "https://www.ms-digital-hub.com/",
-]
-app.use(
-  cors({
-    origin: allowedOrigins,
+];
 
-   
-    credentials: true,
-    methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization"
-  })
-);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if(allowedOrigins.includes(origin)){
+  res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 
 // **Middleware**
 app.use(express.json());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname,"uploads")));
 app.use(
@@ -60,21 +73,7 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if(allowedOrigins.includes(origin)){
-  res.header("Access-Control-Allow-Origin", origin);
-  }
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
 // Routes
 app.use("/auth", require("./routes/auth"));
 app.get("/",(req, res)=>{
