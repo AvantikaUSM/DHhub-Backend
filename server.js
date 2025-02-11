@@ -8,7 +8,7 @@ require("./config/passport")(passport);
 
 const app = express();
 
-// 🌍 Allow both Localhost & Production Frontend
+//  Allow both Localhost & Production Frontend
 const allowedOrigins = [
   "http://localhost:3000",
   "https://www.ms-digital-hub.com",
@@ -19,10 +19,10 @@ app.use((req, res, next) => {
 
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
-    console.log("✅ CORS allowed for:", origin);
+    console.log(" CORS allowed for:", origin);
     res.header("Access-Control-Allow-Origin", origin);
   } else {
-    console.log("❌ CORS denied for:", origin);
+    console.log(" CORS denied for:", origin);
   }
 
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
