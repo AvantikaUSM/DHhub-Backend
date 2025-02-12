@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
         return res.status(400).json({ error: "No file uploaded" });
       }
   
-      const { title, description } = req.body;
+      const { title, description, category } = req.body;
       const documentId = path.parse(req.file.filename).name; // Extract ID from filename
       const pdfPath = path.join(__dirname, `../uploads/${req.file.filename}`); // Path to uploaded PDF
       const outputDir = path.join(__dirname, `../uploads/${documentId}/pages`); // Pages folder
@@ -71,6 +71,7 @@ const storage = multer.diskStorage({
           documentId,
           title,
           description,
+          category,
           fileUrl: `/uploads/${req.file.filename}`,
           uploadedBy: req.user._id, // Ensure user is authenticated
           pages: pagesArray,
@@ -188,5 +189,17 @@ router.post("/:documentId/page/:pageNumber/transcribe", isAuthenticated, async (
       res.status(500).json({ error: "Error fetching page" });
     }
   });
+
+  router.get("/categories", isAuthenticated, async(req, res)=>{
+    try{
+      const categories= await Document.aggregate([
+        { $group: {_id:"$category", documents:{$push:"$$ROOT"}}}
+      ]);
+      res.status(200).json(categories);
+    } catch(error){
+      console.error("Error fetching categories", error);
+      res.status(500).json({error:"Error fetching categories"});
+    }
+  })
  
 module.exports = router;
