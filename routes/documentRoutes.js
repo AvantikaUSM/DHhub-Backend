@@ -122,13 +122,39 @@ router.get("/:documentId", isAuthenticated, async (req, res) => {
  * 2. Fetch All Documents
  * @route GET /documents
  */
-router.get("/", isAuthenticated, async (req, res) => {
-  try {
-    const documents = await Document.find().populate("uploadedBy", "name email");
-    res.status(200).json(documents);
-  } catch (error) {
-    res.status(500).json({ error: "Error fetching documents" });
-  }
+  router.get("/", isAuthenticated, async (req, res) => {
+    try {
+        const documents = await Document.find().populate("uploadedBy", "name email");
+        
+        const documentsWithProgress = documents.map((doc) => {
+            const totalPages = doc.pages.length;
+            const statusCounts = {
+                completed: 0,
+                "in progress": 0,
+                "in review": 0,
+                "not started": 0,
+            };
+
+            // Count pages based on their status
+            doc.pages.forEach(page => {
+                statusCounts[page.status] += 1;
+            });
+
+            // Calculate percentage of each status
+            const progress = {
+                completed: ((statusCounts.completed / totalPages) * 100).toFixed(2),
+                inProgress: ((statusCounts["in progress"] / totalPages) * 100).toFixed(2),
+                inReview: ((statusCounts["in review"] / totalPages) * 100).toFixed(2),
+                notStarted: ((statusCounts["not started"] / totalPages) * 100).toFixed(2),
+            };
+
+            return { ...doc._doc, progress };
+        });
+
+        res.status(200).json(documentsWithProgress);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching documents" });
+    }
 });
 
 /**
@@ -201,5 +227,34 @@ router.post("/:documentId/page/:pageNumber/transcribe", isAuthenticated, async (
       res.status(500).json({error:"Error fetching categories"});
     }
   })
+  router.patch("/:documentId/page/:pageNumber/status", isAuthenticated, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const { documentId, pageNumber } = req.params;
+      console.log(`Received status update : ${status} for document ${documentId}, page ${pageNumber}`);
+      const document = await Document.findOne({ documentId: documentId });
+  
+      if (!document) 
+        {
+          console.error("document not found");
+          return res.status(404).json({ error: "Document not found" });
+        }
+  
+      const page = document.pages.find((p) => p.pageNumber == pageNumber);
+      if (!page) {
+        console.error(`Page not found: ${pageNumber}`);
+        return res.status(404).json({ error: "Page not found" });
+      }
+  
+      page.status = status;
+      await document.save();
+      console.log(`Page ${pageNumber} status updated to : ${status}`);
+  
+      res.json({ message: "Page status updated" });
+    } catch (error) {
+      console.error("Error updating page status", error);
+      res.status(500).json({ error: "Error updating page status" });
+    }
+  });
  
 module.exports = router;

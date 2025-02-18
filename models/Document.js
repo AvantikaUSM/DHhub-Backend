@@ -13,7 +13,7 @@ const DocumentSchema = new mongoose.Schema({
   pages: [ { 
     pageNumber: Number,  
     imageUrl: String,
-    status: { type: String, enum: ["not started", "in progress", "needs review", "completed"], default: "not started", }, 
+    status: { type: String, enum: ["not started", "in progress", "in review", "completed"], default: "not started", }, 
     transcription: { type: String, default: "" }, 
     contributors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],  
      }, 
