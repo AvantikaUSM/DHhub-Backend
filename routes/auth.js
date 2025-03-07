@@ -4,12 +4,21 @@ const jwt = require("jsonwebtoken");
 const passport = require("passport");
 const User = require("../models/User");
 const {isAuthenticated, isAdmin}= require("../middleware/authMiddleware");
-const router = express.Router();
+const crypto =require("crypto");
 
+const router = express.Router();
+const nodemailer = require("nodemailer");
 //  Generate JWT Token
 const generateToken = (user) => {
   return jwt.sign({ _id: user._id.toString(), role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
+const transporter = nodemailer.createTransport({
+  service:"Gmail",
+  auth:{
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 const passwordRegex=/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
 //  User Registration
 router.post("/signup", async (req, res) => {
@@ -30,6 +39,7 @@ router.post("/signup", async (req, res) => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken =  crypto.randomBytes(32).toString("hex");
     const isAdmin=(await User.countDocuments())===0;
 
     // Set user role (Default to "user" unless explicitly specified)
@@ -37,22 +47,45 @@ router.post("/signup", async (req, res) => {
       name, 
       email, 
       password: hashedPassword, 
+      isVerified:false,
+      verificationToken,
       role: isAdmin ? "admin" : "user", 
     });
 
     await newUser.save();
-    console.log("user registered sucessfully", newUser);
+    const verificationLink =`${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+    await transporter.sendMail({
+      to:email,
+      subject:"Email Verification",
+      html:`<h3>Click the link below to verify your email:</h3><a href="${verificationLink}">Verify Email</a>`,
+    });
+  
 
-    // Generate JWT token
-    const token = generateToken(newUser);
-
-    res.status(201).json({ message: "User registered successfully", token, user: newUser });
+    res.status(201).json({ message: "User registered successfully. Please check your email for verification." });
   } catch (error) {
     console.error("signup failed", error);
     res.status(500).json({ error: "Registration failed" });
   }
 });
-
+router.get("/verify-email", async(req, res)=>{
+  
+  try{
+    const {token} = req.query;
+    const user = await User.findOne({verificationToken:token});
+    if(!user){ 
+      
+      return res.status(400).json({error:"Invalid or expired token"});
+    }
+    user.verificationToken = null;
+    user.isVerified = true;
+ 
+    await user.save();
+    return res.json({message:"email verified sucessfully. You can now login."});
+  } catch(error){
+    console.error("Email verification failed", error);
+    res.status(500).json({error:"Verification failed"});
+  }
+});
 //  User Login
 router.post("/login", async (req, res) => {
   try {
@@ -60,7 +93,15 @@ router.post("/login", async (req, res) => {
 
     // Find user by email
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "Invalid email or password" });
+    if (!user) 
+      {
+        return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+    if(!user.isVerified)
+      {
+         return res.status(400).json({error:"Please verify your email before logging in."});
+      }
 
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
