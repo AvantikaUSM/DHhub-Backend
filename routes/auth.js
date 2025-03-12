@@ -209,7 +209,7 @@ router.patch("/promote/:userId", isAuthenticated, isAdmin, async (req, res) => {
       if(!user) return res.status(400).json({ error:"Email not registered"});
       const resetToken = crypto.randomBytes(32).toString("hex");
       user.resetPasswordToken = resetToken;
-      user.resetPasswordToken = new Date(Date.now() + 20*60*1000);
+      user.resetPasswordExpiry = new Date(Date.now() + 20*60*1000);
       await user.save();
       const resetLink =`${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
     //  const resetLink =`http://localhost:3000/reset-password?token=${resetToken}`;
