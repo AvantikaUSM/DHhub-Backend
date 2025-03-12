@@ -162,4 +162,88 @@ router.patch("/promote/:userId", isAuthenticated, isAdmin, async (req, res) => {
     }
   });
 
+  router.post("/send-signin-code", async(req,res)=>{
+    try{
+      const {email} = req.body;
+      if(!email) return res.status(400).json({error:"Email is required"});
+      const user = await User.findOne({email});
+      if(!user) return res.status(400).json({error:"Email not registered"});
+      const signInCode = crypto.randomInt(100000, 999999).toString();
+      const expiry = new Date(Date.now() + 10 * 60 * 1000);
+      user.signInCode = signInCode;
+      user.signInCodeExpiry= expiry;
+      await user.save();
+      await transporter.sendMail({
+        to:email,
+        subject:"Your Sign-in code",
+        html:`<p>Your sign-in code is <strong>${signInCode}</strong>. It expires in 10minutes.</p>`,
+      });
+      res.json({message:"Sign-in code sent"});
+    } catch(error){
+      console.error("Error sending sign-in code", error);
+      res.status(500).json({error:"Couldnot send sign-in code"});
+    }
+  });
+
+  router.post("/verify-sign-in-code", async(req, res)=>{
+    try{
+      const {email, signInCode} = req.body;
+      const user = await User.findOne({email});
+      if(!user || user.signInCode !== signInCode || new Date()> user.signInCodeExpiry){
+        return res.status(400).json({error:"Inavlid or expired code"});
+      }
+      user.signInCode= null;
+      user.signInCodeExpiry= null;
+      await user.save();
+      const token = jwt.sign({ _id:user._id.toString(),role:user.role}, process.env.JWT_SECRET,{expiresIn:"7d"});
+      res.json({message:"Signed in successfully", token, user});
+    } catch(error){
+      res.status(500).json({error:"Verification failed"});
+    }
+  });
+
+  router.post("/forgot-password", async(req, res)=>{
+    try{
+      const {email}= req.body;
+      const user = await User.findOne({email});
+      if(!user) return res.status(400).json({ error:"Email not registered"});
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordToken = new Date(Date.now() + 20*60*1000);
+      await user.save();
+      const resetLink =`${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+    //  const resetLink =`http://localhost:3000/reset-password?token=${resetToken}`;
+
+      await transporter.sendMail({
+        to:email,
+        subject:"Reset Your Password",
+        html:`<p> Hi ${user.name}, </p>
+              <p> Click the link below to reset your password:</p>
+              <a href="${resetLink}"> Reset Password</a>
+              <p> The link expires in 20 minutes.</p>`,
+      });
+      res.json({message:"Password reset email sent"});
+    } catch(error){
+      res.status(500).json({error:"Failed to send reset email"});
+    }
+  });
+
+  router.post("/reset-password", async(req, res)=>{
+    try{
+      const {token, newPassword} = req.body;
+      const user = await User.findOne({ resetPasswordToken:token});
+
+      if(!user || new Date()>user.resetPasswordExpiry){
+        return res.status(400).json({error:"Invalid or expired token"});
+      }
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.resetPasswordToken = null;
+      user.resetPasswordExpiry = null;
+      await user.save();
+      res.json({message:"Password reset successfully"});
+    } catch(error){
+      res.status(500).json({error:"Password reset failed"});
+    }
+  });
+
 module.exports = router;
