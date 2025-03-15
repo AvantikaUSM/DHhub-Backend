@@ -245,8 +245,13 @@ router.post("/:documentId/page/:pageNumber/transcribe", isAuthenticated, async (
         console.error(`Page not found: ${pageNumber}`);
         return res.status(404).json({ error: "Page not found" });
       }
+
+      
   
       page.status = status;
+      if(!page.contributors.includes(req.user._id)){
+        page.contributors.push(req.user._id);
+        }
       await document.save();
       console.log(`Page ${pageNumber} status updated to : ${status}`);
   
